@@ -1,0 +1,37 @@
+# RNFleet LAN router configuration.
+#
+# Installed to /etc/rnfleet/lan-router.conf. The rnfleet-lan-router service reads
+# this on boot and turns the appliance into a LAN default gateway that routes
+# client traffic out to GSA (split tunnel) and the local WAN.
+#
+#   LAN client --(default gw = appliance LAN IP)--> Appliance --> GSA tunnel
+#                                                              \-> local WAN (internet)
+#
+# Split tunnel: destinations matching GSA's BGP-advertised prefixes egress via the
+# ipsec-gsa tunnel; everything else egresses locally via the WAN (NAT/masquerade).
+#
+# On a single-NIC box (e.g. a cloud test VM) there is no separate LAN interface;
+# the service auto-detects this and no-ops, so it is safe to leave enabled.
+
+# Master switch. Set to false to disable the LAN router role entirely.
+LAN_ROUTER_ENABLED=true
+
+# LAN interface that faces the client network. "auto" picks the first wired NIC
+# that is NOT the WAN (default-route) device, the tunnel, or loopback. Override
+# with an explicit device name (e.g. eth1, enp0s8) on multi-NIC appliances.
+LAN_IFACE=auto
+
+# LAN gateway address the appliance owns (CIDR). Clients use this IP as their
+# default gateway and DNS server.
+LAN_CIDR=192.168.100.1/24
+
+# DHCP pool handed out to LAN clients (must be inside LAN_CIDR).
+DHCP_RANGE_START=192.168.100.100
+DHCP_RANGE_END=192.168.100.200
+DHCP_LEASE=12h
+
+# Upstream resolvers dnsmasq forwards to for non-local names (comma-separated).
+UPSTREAM_DNS=1.1.1.1,8.8.8.8
+
+# The route-based GSA tunnel interface (matches TUNNEL_XFRM_IFACE in the runtime).
+TUNNEL_IFACE=ipsec-gsa

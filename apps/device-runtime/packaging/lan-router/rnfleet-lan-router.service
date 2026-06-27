@@ -1,0 +1,18 @@
+[Unit]
+Description=RNFleet LAN Router (DHCP/DNS + NAT, LAN -> GSA tunnel / WAN)
+Documentation=https://github.com/jeevanbisht/RNFleetManager
+# Come up after the network and the tunnel agent so WAN/ipsec-gsa exist. The
+# script also no-ops gracefully if the tunnel isn't up yet (NAT matches by
+# output interface, so it starts working the moment ipsec-gsa appears).
+After=network-online.target nftables.service rnfleet-device-runtime.service
+Wants=network-online.target
+ConditionPathExists=/etc/rnfleet/lan-router.conf
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/rnfleet-lan-router up
+ExecStop=/usr/local/sbin/rnfleet-lan-router down
+
+[Install]
+WantedBy=multi-user.target

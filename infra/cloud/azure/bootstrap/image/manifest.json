@@ -1,0 +1,23 @@
+{
+  "builds": [
+    {
+      "name": "ubuntu_appliance",
+      "builder_type": "azure-arm",
+      "build_time": 1781912430,
+      "files": null,
+      "artifact_id": "/subscriptions/bf9a0b19-cd7b-4515-ba71-0495728d691c/resourceGroups/RNFleet/providers/Microsoft.Compute/images/rnfleet-appliance-ubuntu-2404",
+      "packer_run_uuid": "0fc148da-3734-be5f-e98c-3573cea1d72b",
+      "custom_data": null
+    },
+    {
+      "name": "ubuntu_appliance",
+      "builder_type": "azure-arm",
+      "build_time": 1782214169,
+      "files": null,
+      "artifact_id": "/subscriptions/bf9a0b19-cd7b-4515-ba71-0495728d691c/resourceGroups/RNFleet/providers/Microsoft.Compute/images/rnfleet-appliance-ubuntu-2404",
+      "packer_run_uuid": "c52bc128-449a-9de3-ffa6-f3380e8d2885",
+      "custom_data": null
+    }
+  ],
+  "last_run_uuid": "c52bc128-449a-9de3-ffa6-f3380e8d2885"
+}

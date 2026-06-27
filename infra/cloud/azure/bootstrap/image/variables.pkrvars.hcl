@@ -1,0 +1,6 @@
+subscription_id      = "bf9a0b19-cd7b-4515-ba71-0495728d691c"
+tenant_id            = "72f988bf-86f1-41af-91ab-2d7cd011db47"
+location             = "westus3"
+resource_group_name  = "RNFleet"
+managed_image_name   = "rnfleet-appliance-ubuntu-2404"
+temp_resource_group_name = "rnfleet-packer-temp"

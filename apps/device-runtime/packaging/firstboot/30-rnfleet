@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# /etc/update-motd.d/30-rnfleet — shows appliance enrollment status at login.
+SENTINEL="/var/lib/rnfleet/.configured"
+ENV_FILE="/etc/rnfleet/device-runtime.env"
+SVC="rnfleet-device-runtime.service"
+LOGO="/etc/rnfleet/logo.txt"
+
+echo ""
+[ -f "$LOGO" ] && cat "$LOGO"
+echo ""
+if [ -f "$SENTINEL" ] && [ -f "$ENV_FILE" ]; then
+  DID="$(grep -E '^DEVICE_ID=' "$ENV_FILE" 2>/dev/null | cut -d= -f2-)"
+  CP="$(grep -E '^CONTROL_PLANE_URL=' "$ENV_FILE" 2>/dev/null | cut -d= -f2-)"
+  STATE="$(systemctl is-active "$SVC" 2>/dev/null || echo unknown)"
+  echo "  RNFleet appliance: ENROLLED"
+  echo "    Device ID    : ${DID:-?}"
+  echo "    Control-plane: ${CP:-?}"
+  echo "    Runtime      : $STATE   (journalctl -u $SVC -f)"
+else
+  echo "  RNFleet appliance: NOT ENROLLED"
+  echo "    Finish setup with:  sudo rnfleet-setup"
+fi
+echo ""

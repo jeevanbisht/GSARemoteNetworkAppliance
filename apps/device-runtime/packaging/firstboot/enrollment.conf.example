@@ -1,0 +1,21 @@
+# RNFleet appliance pre-seed (UNATTENDED enrollment).
+#
+# Drop this file at /etc/rnfleet/enrollment.conf to enroll an appliance WITHOUT
+# the interactive first-boot wizard (e.g. via cloud-init write_files, a kickstart
+# overlay, or a factory provisioning step). On next boot rnfleet-firstboot reads
+# these values, writes the runtime env, and starts the device runtime.
+#
+# Only FLEET_PSK is strictly required; everything else has a sensible default.
+# Leave DEVICE_ID blank to auto-generate a unique id from the machine-id.
+
+CONTROL_PLANE_URL=https://rn-fleet-manager-control-plane.vercel.app
+FLEET_PSK=dev-fleet-psk
+# TUNNEL_PSK=microsoft12345
+# DEVICE_ID=
+SITE_ID=default-site
+
+# Set FIRSTBOOT_INTERACTIVE=true to SHOW the first-boot wizard pre-filled with the
+# values above (instead of enrolling silently). The operator reviews each field on
+# the console, confirms it with Y/n, and can override any value before applying.
+# Leave it unset/false for fully unattended (silent) enrollment.
+# FIRSTBOOT_INTERACTIVE=true

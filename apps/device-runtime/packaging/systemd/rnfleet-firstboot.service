@@ -1,0 +1,26 @@
+[Unit]
+Description=RNFleet Appliance First-Boot Enrollment
+Documentation=https://github.com/jeevanbisht/RNFleetManager
+# Only run until the appliance has been enrolled.
+ConditionPathExists=!/var/lib/rnfleet/.configured
+After=network-online.target systemd-user-sessions.service
+Wants=network-online.target
+# Run the console wizard before the login prompt so the operator sees it first.
+Before=getty@tty1.service serial-getty@ttyS0.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=no
+ExecStart=/usr/local/sbin/rnfleet-setup --firstboot
+# Attach to the system console so the wizard can prompt interactively. When no
+# TTY/pre-seed is available the wizard prints instructions and exits cleanly,
+# so this never blocks boot.
+StandardInput=tty-force
+StandardOutput=tty
+StandardError=tty
+TTYPath=/dev/console
+TTYReset=yes
+TTYVHangup=yes
+
+[Install]
+WantedBy=multi-user.target

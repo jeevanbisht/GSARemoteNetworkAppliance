@@ -1,0 +1,19 @@
+# RNFleet appliance pre-seed for UNATTENDED Azure enrollment.
+#
+# Pass this file to create-azure-vm.ps1 with -EnrollmentConf .\enrollment.conf
+# and it is injected as cloud-init custom-data, which writes it to
+# /etc/rnfleet/enrollment.conf before first boot. The appliance then enrolls
+# silently (no serial-console interaction) and starts the device runtime.
+#
+# Only FLEET_PSK is strictly required; leave DEVICE_ID blank to auto-generate a
+# unique id from the VM's machine-id.
+
+CONTROL_PLANE_URL=https://rn-fleet-manager-control-plane.vercel.app
+FLEET_PSK=dev-fleet-psk
+SITE_ID=default-site
+# DEVICE_ID=
+# TUNNEL_PSK=microsoft12345
+
+# Set true to SHOW the wizard pre-filled (operator confirms on the serial
+# console) instead of enrolling silently:
+# FIRSTBOOT_INTERACTIVE=true

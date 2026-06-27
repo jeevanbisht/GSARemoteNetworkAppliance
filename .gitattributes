@@ -1,0 +1,9 @@
+*.sh text eol=lf
+*.service text eol=lf
+*.pkr.hcl text eol=lf
+*.pkrvars.hcl text eol=lf
+apps/device-runtime/packaging/firstboot/30-rnfleet text eol=lf
+apps/device-runtime/packaging/firstboot/enrollment.conf.example text eol=lf
+apps/device-runtime/packaging/firstboot/rnfleet-logo.txt text eol=lf whitespace=-trailing-space,-tab-in-indent
+infra/bare-metal/iso/autoinstall/user-data text eol=lf
+infra/bare-metal/iso/autoinstall/meta-data text eol=lf

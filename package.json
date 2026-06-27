@@ -1,0 +1,15 @@
+{
+  "name": "rnfleetmanager",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "start:control-plane": "node apps/control-plane/src/server.js",
+    "start:portal": "node apps/portal/src/server.js",
+    "start:device": "node apps/device-runtime/src/agent.js",
+    "check": "node scripts/check-syntax.js"
+  }
+}

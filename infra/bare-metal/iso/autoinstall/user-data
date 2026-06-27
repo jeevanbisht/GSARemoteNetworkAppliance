@@ -1,0 +1,72 @@
+#cloud-config
+# =============================================================================
+# RNFleet bare-metal appliance — Ubuntu 24.04 autoinstall (Subiquity)
+# =============================================================================
+# This drives a fully unattended install of the RNFleet edge appliance onto any
+# physical server (or VM). It wipes the target disk, installs Ubuntu Server, bakes
+# in the same prerequisites as the Azure image (Node 22, strongSwan/swanctl, FRR,
+# IP forwarding) plus the RNFleet runtime and the first-boot enrollment wizard.
+#
+# After install the box reboots and, on first boot, `rnfleet-setup` prompts on the
+# console for the minimum config (control-plane URL, Device ID, PSK, ...). The
+# device runtime stays DISABLED until enrollment completes.
+#
+# Default login (CHANGE THIS for production — see README):
+#   username: rnfleet   password: rnfleet
+#
+# WARNING: `storage.layout` below ERASES the target disk. Boot only on hardware
+# you intend to turn into an appliance.
+# =============================================================================
+autoinstall:
+  version: 1
+
+  # Don't try to update the installer from the network (keeps installs reproducible
+  # and works on air-gapped / slow links).
+  refresh-installer:
+    update: false
+
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+
+  # SSH so the appliance is reachable after install (the wizard also runs on the
+  # local console). Password auth on by default; swap to keys for production.
+  ssh:
+    install-server: true
+    allow-pw: true
+
+  identity:
+    hostname: rnfleet-appliance
+    realname: RNFleet Appliance Admin
+    username: rnfleet
+    # SHA-512 crypt of "rnfleet". Generate your own with:
+    #   openssl passwd -6   (or: mkpasswd --method=SHA-512)
+    password: "$6$rnfleetsalt01$vUpX8/EVag8y4TylWLuqe/jCnpKfxobgNSWy94KrJaM.xzDMOBKx/5mpr9aiC3kXTHMWhScuUkyYCdw0QEnCR0"
+
+  # Whole-disk layout — appliance owns the machine. Use "lvm" if you prefer.
+  storage:
+    layout:
+      name: direct
+
+  # Tunnel stack baked at install time (mirrors the Azure image). Node 22 is added
+  # from NodeSource by the provision script (not in the Ubuntu archive).
+  packages:
+    - strongswan-swanctl
+    - charon-systemd
+    - strongswan-pki
+    - libcharon-extra-plugins
+    - libstrongswan-extra-plugins
+    - frr
+    - frr-pythontools
+    - ca-certificates
+    - curl
+    - gnupg
+
+  # Provision the RNFleet runtime + first-boot wizard INSIDE the freshly installed
+  # system. The payload (this repo's runtime + packaging) is bundled on the ISO at
+  # /cdrom/rnfleet by build-appliance-iso.sh. We copy it into the target and run
+  # the provision script in-target (chrooted, with network) so apt/npm work.
+  late-commands:
+    - mkdir -p /target/opt/rnfleet-bootstrap
+    - cp -a /cdrom/rnfleet/. /target/opt/rnfleet-bootstrap/
+    - curtin in-target --target=/target -- bash -c 'bash /opt/rnfleet-bootstrap/provision-appliance.sh 2>&1 | tee /var/log/rnfleet-provision.log; exit ${PIPESTATUS[0]}'

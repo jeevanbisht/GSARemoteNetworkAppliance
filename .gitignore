@@ -1,0 +1,33 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+
+# Logs
+*.log
+logs/
+
+# Env and secrets
+.env
+.env.*
+!.env.example
+
+# Build artifacts
+dist/
+build/
+out/
+coverage/
+tmp/
+temp/
+
+# Dependency directories
+node_modules/
+vendor/
+# Golden image build artifacts (large, regenerable)
+*.qcow2
+*.raw
+*.vhdx
+dist/golden-min/

@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GSA Appliance ⇄ Global Secure Access — IPsec / BGP / Traffic Flow</title>
+<script>
+  (() => {
+    const param = new URLSearchParams(window.location.search).get("scoutTheme");
+    const theme =
+      param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+</script>
+<style>
+  :root {
+    color-scheme: light;
+    --cp-bg: #eef2f8;
+    --cp-bg-elevated: #f6f9fd;
+    --cp-surface: #ffffff;
+    --cp-surface-soft: #eaf0f8;
+    --cp-border: #d9e1ec;
+    --cp-border-strong: #9fb0c6;
+    --cp-text: #1a2230;
+    --cp-text-muted: #4a586b;
+    --cp-text-soft: #647189;
+    --cp-accent: #0F6CBD;
+    --cp-accent-hover: #0c5a9e;
+    --cp-accent-soft: rgba(15, 108, 189, 0.10);
+    --cp-accent-fg: #ffffff;
+    --cp-success: #1a8a3f;
+    --cp-danger: #dc2626;
+    --cp-warning: #f59e0b;
+    --cp-link: #0F6CBD;
+    --cp-shadow: 0 18px 48px rgba(11, 59, 121, 0.14);
+    --cp-overlay: rgba(255, 255, 255, 0.8);
+    --cp-panel: rgba(255, 255, 255, 0.86);
+    --cp-panel-strong: rgba(255, 255, 255, 0.96);
+    --cp-sheen: rgba(255, 255, 255, 0.55);
+    --cp-highlight: rgba(15, 108, 189, 0.12);
+    --entra-gradient: linear-gradient(120deg, #32D4F5 0%, #1F8FE8 32%, #6E5CD0 66%, #E3008C 100%);
+  }
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --cp-bg: #0f141d;
+    --cp-bg-elevated: #141b26;
+    --cp-surface: #19212e;
+    --cp-surface-soft: #202a3a;
+    --cp-border: #2b394d;
+    --cp-border-strong: #43566f;
+    --cp-text: #e6eef8;
+    --cp-text-muted: #9fb0c6;
+    --cp-text-soft: #b6c4d8;
+    --cp-accent: #4aa8f0;
+    --cp-accent-hover: #6ab9f4;
+    --cp-accent-soft: rgba(74, 168, 240, 0.16);
+    --cp-accent-fg: #0a1422;
+    --cp-success: #4ade80;
+    --cp-danger: #f87171;
+    --cp-warning: #fbbf24;
+    --cp-link: #4aa8f0;
+    --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.42);
+    --cp-overlay: rgba(20, 27, 38, 0.88);
+    --cp-panel: rgba(20, 27, 38, 0.72);
+    --cp-panel-strong: rgba(20, 27, 38, 0.96);
+    --cp-sheen: rgba(255, 255, 255, 0.04);
+    --cp-highlight: rgba(74, 168, 240, 0.14);
+    --entra-gradient: linear-gradient(120deg, #32D4F5 0%, #2f9bf0 32%, #8a78e0 66%, #ff3fa6 100%);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--cp-bg);
+    color: var(--cp-text);
+    font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
+    line-height: 1.45;
+    padding: 28px 20px 56px;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; }
+
+  header.page { margin-bottom: 18px; }
+  .brand { display: flex; align-items: center; gap: 9px; margin-bottom: 9px; }
+  .brand .ribbon { width: 30px; height: 30px; display: block; }
+  .brand .eyebrow {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--cp-text-muted);
+  }
+  .brand .eyebrow b { color: var(--cp-text); font-weight: 700; }
+  header.page h1 {
+    font-size: 1.5rem;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  header.page h1 .acc {
+    background: var(--entra-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  header.page p {
+    margin: 0;
+    color: var(--cp-text-muted);
+    font-size: 0.95rem;
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 18px 0 16px;
+  }
+  .seg {
+    display: inline-flex;
+    background: var(--cp-surface-soft);
+    border: 1px solid var(--cp-border);
+    border-radius: 0.625rem;
+    padding: 4px;
+    gap: 4px;
+  }
+  .seg button {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: var(--cp-text-muted);
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.86rem;
+    padding: 8px 14px;
+    border-radius: 0.45rem;
+    cursor: pointer;
+    transition: background 0.18s ease, color 0.18s ease;
+    white-space: nowrap;
+  }
+  .seg button:hover { color: var(--cp-text); }
+  .seg button.active {
+    background: var(--cp-accent);
+    color: var(--cp-accent-fg);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.14);
+  }
+  .seg button .num {
+    display: inline-grid;
+    place-items: center;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--cp-accent-soft);
+    color: var(--cp-accent);
+    font-size: 0.72rem;
+    margin-right: 7px;
+  }
+  .seg button.active .num { background: rgba(255,255,255,0.25); color: var(--cp-accent-fg); }
+
+  .btn {
+    appearance: none;
+    border: 1px solid var(--cp-border);
+    background: var(--cp-surface);
+    color: var(--cp-text);
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.86rem;
+    padding: 9px 16px;
+    border-radius: 0.625rem;
+    cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease;
+  }
+  .btn:hover { border-color: var(--cp-border-strong); }
+  .btn.primary {
+    background: var(--cp-accent);
+    border-color: var(--cp-accent);
+    color: var(--cp-accent-fg);
+  }
+  .btn.primary:hover { background: var(--cp-accent-hover); }
+
+  .stage-card {
+    position: relative;
+    background: var(--cp-surface);
+    border: 1px solid var(--cp-border);
+    border-radius: 16px;
+    padding: 8px;
+    overflow: hidden;
+    box-shadow: 0 0 2px rgba(11,59,121,0.12), 0 1px 2px rgba(11,59,121,0.14);
+  }
+  .stage-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: var(--entra-gradient);
+  }
+  .scene-host {
+    background: linear-gradient(180deg, #f4f9ff 0%, #eef4fb 100%);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  svg.scene { display: block; width: 100%; height: auto; }
+  svg text { font-family: "Segoe UI", Aptos, Calibri, sans-serif; -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; }
+  .s-node  { font-size: 15px; font-weight: 700; fill: #0B3B79; letter-spacing: 0.2px; }
+  .s-kick  { font-size: 10.5px; font-weight: 700; fill: #6b7a99; letter-spacing: 0.7px; }
+  .s-val   { font-size: 12.5px; font-weight: 700; fill: #1A74D2; font-family: Consolas, "Courier New", monospace; letter-spacing: 0.2px; }
+  .s-link  { font-size: 12.5px; font-weight: 700; letter-spacing: 2.4px; }
+  .s-sub   { font-size: 12px; font-weight: 600; fill: #5b6b8c; }
+  .s-gsa   { font-size: 13.5px; font-weight: 700; fill: #ffffff; letter-spacing: 0.3px; }
+
+  .desc {
+    position: relative;
+    margin-top: 16px;
+    background: var(--cp-surface);
+    border: 1px solid var(--cp-border);
+    border-radius: 12px;
+    padding: 16px 18px 16px 22px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(11,59,121,0.06), 0 2px 10px rgba(11,59,121,0.05);
+  }
+  .desc::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+    background: var(--entra-gradient);
+  }
+  .desc h2 { margin: 0 0 6px; font-size: 1.05rem; }
+  .desc p { margin: 0; color: var(--cp-text-muted); font-size: 0.94rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 12px; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; font-size: 0.83rem; color: var(--cp-text-muted); font-weight: 600; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; box-shadow: 0 0 0 3px rgba(0,0,0,0.04); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-top: 18px;
+  }
+  @media (max-width: 880px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 520px) { .grid { grid-template-columns: 1fr; } }
+  .lcard {
+    position: relative;
+    background: var(--cp-surface);
+    border: 1px solid var(--cp-border);
+    border-radius: 12px;
+    padding: 16px 16px 14px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(11,59,121,0.05), 0 2px 10px rgba(11,59,121,0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .lcard::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--entra-gradient);
+  }
+  .lcard:hover {
+    transform: translateY(-2px);
+    border-color: #bcd0ec;
+    box-shadow: 0 10px 24px rgba(11,59,121,0.14);
+  }
+  .lcard .lh { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; }
+  .lcard .ico {
+    width: 32px; height: 32px; border-radius: 9px;
+    background: linear-gradient(135deg, #1F8FE8 0%, #6E5CD0 100%); color: #fff;
+    display: grid; place-items: center; flex: none;
+    box-shadow: 0 3px 8px rgba(15,108,189,0.30);
+  }
+  .lcard h3 { margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--cp-text); letter-spacing: -0.01em; }
+  .lcard li::marker, .kp-cols li::marker { color: var(--cp-accent); }
+  .lcard ul { margin: 0; padding-left: 16px; }
+  .lcard li { font-size: 0.82rem; color: var(--cp-text-muted); margin: 3px 0; }
+  .lcard p { margin: 0; font-size: 0.82rem; color: var(--cp-text-muted); }
+  .lcard .mono { font-family: Consolas, "Courier New", monospace; color: var(--cp-text); font-weight: 600; }
+
+  .keypoints {
+    position: relative;
+    margin-top: 16px;
+    background: var(--cp-surface);
+    border: 1px solid var(--cp-border);
+    border-radius: 12px;
+    padding: 18px 20px 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(11,59,121,0.05), 0 2px 10px rgba(11,59,121,0.05);
+  }
+  .keypoints::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--entra-gradient);
+  }
+  .keypoints h3 { margin: 0 0 12px; font-size: 0.98rem; font-weight: 700; color: var(--cp-text); display: flex; align-items: center; gap: 10px; }
+  .keypoints h3 .kp-ico {
+    width: 26px; height: 26px; border-radius: 8px; flex: none;
+    background: linear-gradient(135deg, #1F8FE8 0%, #6E5CD0 100%);
+    display: grid; place-items: center;
+    box-shadow: 0 3px 8px rgba(15,108,189,0.30);
+  }
+  .kp-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 28px; }
+  @media (max-width: 720px) { .kp-cols { grid-template-columns: 1fr; } }
+  .kp-cols li { font-size: 0.85rem; color: var(--cp-text-muted); margin: 5px 0; }
+  footer.note { margin-top: 20px; color: var(--cp-text-soft); font-size: 0.78rem; text-align: center; }
+
+  /* SVG animation helpers */
+  .fade { transition: opacity 0.55s ease; }
+  #tunnel { transition: opacity 0.6s ease; }
+  .flow { animation: dashmove 0.9s linear infinite; }
+  @keyframes dashmove { to { stroke-dashoffset: -28; } }
+  .pulse { animation: pulse 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes pulse { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
+  .rrow { transition: opacity 0.35s ease; }
+
+  /* secure traffic inspector (magnifying glass) */
+  .inspect { animation: scan 3.6s ease-in-out infinite; }
+  @keyframes scan {
+    0%   { transform: translate(-8px,-8px) rotate(-7deg); }
+    25%  { transform: translate(7px,-3px) rotate(4deg); }
+    50%  { transform: translate(-3px,8px) rotate(-3deg); }
+    75%  { transform: translate(8px,2px) rotate(6deg); }
+    100% { transform: translate(-8px,-8px) rotate(-7deg); }
+  }
+  #insp-ping { animation: insp-ping 1.9s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes insp-ping {
+    0%   { opacity: 0.8; transform: scale(0.45); }
+    70%  { opacity: 0; transform: scale(1.5); }
+    100% { opacity: 0; transform: scale(1.5); }
+  }
+  .ep-pulse { animation: ep-pulse 2.2s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes ep-pulse {
+    0%   { opacity: 0.7; transform: scale(0.6); }
+    70%  { opacity: 0; transform: scale(2.0); }
+    100% { opacity: 0; transform: scale(2.0); }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="page">
+    <div class="brand">
+      <svg class="ribbon" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="rgA" x1="4" y1="9" x2="18" y2="23" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#5AD6F5"/>
+            <stop offset="1" stop-color="#1C8FE0"/>
+          </linearGradient>
+          <linearGradient id="rgB" x1="14" y1="9" x2="30" y2="23" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#2A8FE2"/>
+            <stop offset="1" stop-color="#0A57B0"/>
+          </linearGradient>
+        </defs>
+        <path d="M16 16 C13 10.4 6.4 10.4 6.4 16 C6.4 21.6 13 21.6 16 16"
+              stroke="url(#rgA)" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M16 16 C19 21.6 25.6 21.6 25.6 16 C25.6 10.4 19 10.4 16 16"
+              stroke="url(#rgB)" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="eyebrow"><b>Microsoft Entra ID</b> · Global Secure Access</span>
+    </div>
+    <h1>GSA Appliance ⇄ <span class="acc">Global Secure Access</span></h1>
+    <p>Animated walkthrough — IPsec tunnel creation, BGP route exchange, and traffic forwarding to Internet &amp; Microsoft 365.</p>
+  </header>
+
+  <div class="controls">
+    <div class="seg" id="seg">
+      <button data-stage="1" class="active"><span class="num">1</span>IPsec Tunnel</button>
+      <button data-stage="2"><span class="num">2</span>BGP Routes</button>
+      <button data-stage="3"><span class="num">3</span>Traffic Forwarding</button>
+    </div>
+    <button class="btn primary" id="playAll">▶ Play all stages</button>
+    <button class="btn" id="replay">↻ Replay stage</button>
+  </div>
+
+  <div class="stage-card">
+    <div class="scene-host">
+      <svg class="scene" id="scene" viewBox="0 0 1560 600" role="img" aria-label="GSA network animation">
+        <defs>
+          <linearGradient id="tunGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#dcefff"/>
+            <stop offset="0.5" stop-color="#aed8f6"/>
+            <stop offset="1" stop-color="#dcefff"/>
+          </linearGradient>
+          <linearGradient id="triGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#18A0D8"/>
+            <stop offset="0.38" stop-color="#2C66D2"/>
+            <stop offset="0.7" stop-color="#6B44C2"/>
+            <stop offset="1" stop-color="#C32B97"/>
+          </linearGradient>
+          <linearGradient id="boxFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#155FB2"/>
+            <stop offset="1" stop-color="#0A356E"/>
+          </linearGradient>
+          <linearGradient id="cloudStroke" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#19A6D6"/>
+            <stop offset="0.55" stop-color="#1E5FB5"/>
+            <stop offset="1" stop-color="#7A5BD0"/>
+          </linearGradient>
+          <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="3.2" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="softshadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#11295f" flood-opacity="0.18"/>
+          </filter>
+        </defs>
+
+        <!-- invisible motion guides -->
+        <g fill="none" stroke="none">
+          <path id="g-ike"  d="M 626,312 H 1090"/>
+          <path id="g-m365" d="M 250,312 H 1090 L 1240,338 L 1350,414"/>
+          <path id="g-inet" d="M 250,312 H 1090 L 1240,286 L 1350,216"/>
+        </g>
+
+        <!-- ===== Internal Network container ===== -->
+        <rect x="56" y="64" width="748" height="456" rx="18" fill="#ffffff" stroke="#D4E2F4" stroke-width="1.5"/>
+        <!-- header pill -->
+        <g filter="url(#softshadow)">
+          <rect x="58" y="74" width="300" height="38" rx="10" fill="#EAF3FF" stroke="#CFE2F7"/>
+          <rect x="66" y="81" width="24" height="24" rx="6" fill="#0B3B79"/>
+          <g fill="#ffffff">
+            <rect x="71" y="86" width="6" height="14"/>
+            <rect x="79" y="89" width="7" height="11"/>
+            <rect x="73" y="88" width="2" height="2"/><rect x="73" y="92" width="2" height="2"/>
+            <rect x="81" y="91" width="2" height="2"/>
+          </g>
+          <text class="s-node" x="100" y="98" font-size="14.5">Internal Network</text>
+          <line x1="232" y1="83" x2="232" y2="103" stroke="#CDE0F5" stroke-width="1"/>
+          <text class="s-val" x="243" y="98" font-size="11.5">192.168.100.0/24</text>
+        </g>
+
+        <!-- Internal Host -->
+        <g filter="url(#softshadow)">
+          <rect x="120" y="266" width="22" height="78" rx="4" fill="url(#boxFill)"/>
+          <circle cx="131" cy="280" r="3" fill="#7fd1ff"/>
+          <rect x="150" y="262" width="120" height="86" rx="7" fill="url(#boxFill)"/>
+          <rect x="159" y="270" width="102" height="62" rx="3" fill="#1A74D2"/>
+          <rect x="200" y="348" width="20" height="12" fill="#0B3B79"/>
+          <rect x="182" y="360" width="56" height="8" rx="3" fill="#0B3B79"/>
+        </g>
+        <text class="s-node" x="196" y="388" text-anchor="middle">Internal Host</text>
+
+        <!-- IP info box -->
+        <rect x="104" y="402" width="330" height="104" rx="10" fill="#f4f8ff" stroke="#D4E2F4"/>
+        <g font-size="13" font-family="Consolas, monospace">
+          <circle cx="124" cy="426" r="2.4" fill="#1A74D2"/><text x="138" y="430" fill="#5b6b8c">IP Address</text><text x="238" y="430" font-weight="700" fill="#0B3B79">192.168.100.2</text>
+          <circle cx="124" cy="452" r="2.4" fill="#1A74D2"/><text x="138" y="456" fill="#5b6b8c">Subnet</text><text x="238" y="456" font-weight="700" fill="#0B3B79">255.255.255.0</text>
+          <circle cx="124" cy="478" r="2.4" fill="#1A74D2"/><text x="138" y="482" fill="#5b6b8c">Gateway</text><text x="238" y="482" font-weight="700" fill="#0B3B79">192.168.100.1</text>
+        </g>
+
+        <!-- host -> appliance link (GSA internal interface) -->
+        <line x1="282" y1="312" x2="516" y2="312" stroke="#1E5FB5" stroke-width="3"/>
+        <!-- callout: internal interface (LAN) -->
+        <g>
+          <path d="M544 256 C540 226 502 206 470 196" fill="none" stroke="#bcccea" stroke-width="1.3" stroke-dasharray="3 4"/>
+          <circle cx="544" cy="256" r="2.8" fill="#1A74D2"/>
+          <text class="s-sub" x="392" y="176" text-anchor="middle">Internal Interface · LAN IP</text>
+          <text class="s-val" x="392" y="194" text-anchor="middle">192.168.100.1/24</text>
+        </g>
+
+        <!-- GSA Appliance -->
+        <g filter="url(#softshadow)">
+          <rect x="520" y="260" width="104" height="92" rx="12" fill="url(#boxFill)"/>
+          <g stroke="#86B6E8" stroke-width="2">
+            <line x1="520" y1="284" x2="600" y2="284"/>
+            <line x1="520" y1="308" x2="600" y2="308"/>
+            <line x1="520" y1="332" x2="600" y2="332"/>
+            <line x1="546" y1="260" x2="546" y2="284"/>
+            <line x1="574" y1="284" x2="574" y2="308"/>
+            <line x1="546" y1="308" x2="546" y2="332"/>
+          </g>
+          <path d="M600 278 l24 8 v14 c0 14 -12 22 -24 26 c-12 -4 -24 -12 -24 -26 v-14 z" fill="#1A74D2" stroke="#ffffff" stroke-width="2"/>
+          <path d="M589 304 l7 7 l13 -15" fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+        <text class="s-node" x="572" y="388" text-anchor="middle">GSA Appliance</text>
+
+        <!-- learned routes panel (stage 2) -->
+        <g id="routes-panel" class="fade" opacity="0">
+          <rect x="452" y="404" width="226" height="102" rx="10" fill="#ffffff" stroke="#e3b341" stroke-width="1.6"/>
+          <text x="465" y="424" font-size="12.5" font-weight="700" fill="#9a6a00">Learned Routes (via BGP)</text>
+          <rect id="rrow-0" class="rrow" x="458" y="432" width="214" height="20" rx="5" fill="#f6e2a8" opacity="0"/>
+          <rect id="rrow-1" class="rrow" x="458" y="456" width="214" height="20" rx="5" fill="#f6e2a8" opacity="0"/>
+          <rect id="rrow-2" class="rrow" x="458" y="480" width="214" height="20" rx="5" fill="#f6e2a8" opacity="0"/>
+          <g font-size="12" font-family="Consolas, monospace" fill="#3a3a3a">
+            <text x="466" y="446">M365 prefixes → GSA</text>
+            <text x="466" y="470">Internet routes → GSA</text>
+            <text x="466" y="494">0.0.0.0/0 (default) → GSA</text>
+          </g>
+        </g>
+
+        <!-- callout: external interface internal IP -->
+        <g>
+          <path d="M600 256 C604 226 622 208 640 196" fill="none" stroke="#bcccea" stroke-width="1.3" stroke-dasharray="3 4"/>
+          <circle cx="600" cy="256" r="2.8" fill="#1A74D2"/>
+          <text class="s-sub" x="640" y="176">External Interface · Internal IP</text>
+          <text class="s-val" x="640" y="194">172.x.x.x</text>
+        </g>
+        <!-- callout: external public IP (LEFT tunnel endpoint) -->
+        <g>
+          <path d="M876 200 C786 218 710 268 636 306" fill="none" stroke="#E3008C" stroke-width="1.3" stroke-dasharray="3 4" opacity="0.85"/>
+          <text class="s-sub" x="872" y="176">External Interface · Public IP</text>
+          <text class="s-val" x="872" y="194">50.X.X.X</text>
+        </g>
+        <!-- callout: gsa remote network public IP (RIGHT tunnel endpoint = tunnel start at GSA) -->
+        <g>
+          <path d="M1150 190 C1112 214 1092 258 1088 304" fill="none" stroke="#E3008C" stroke-width="1.3" stroke-dasharray="3 4" opacity="0.85"/>
+          <text class="s-kick" x="1165" y="176" text-anchor="middle">GSA REMOTE NETWORK · PUBLIC IP</text>
+        </g>
+
+        <!-- base IPsec link (pending state) -->
+        <line id="base-link" x1="624" y1="312" x2="1090" y2="312" stroke="#9FC3EA" stroke-width="3" stroke-dasharray="7 6"/>
+
+        <!-- tunnel (shown once established) -->
+        <g id="tunnel" class="fade" opacity="0">
+          <rect x="626" y="298" width="464" height="28" rx="14" fill="url(#tunGrad)" stroke="#1E5FB5" stroke-width="1.4"/>
+          <path d="M634 304 H1082" stroke="#ffffff" stroke-width="1.4" opacity="0.55"/>
+          <ellipse cx="626" cy="312" rx="8" ry="14" fill="#BBDCF7" stroke="#1E5FB5" stroke-width="1.2"/>
+          <ellipse cx="1090" cy="312" rx="8" ry="14" fill="#E6F4FF" stroke="#1E5FB5" stroke-width="1.2"/>
+          <path d="M636 312 H1080" stroke="#2B9AF3" stroke-width="3" stroke-linecap="round" stroke-dasharray="2 14" opacity="0.75" class="flow"/>
+        </g>
+
+        <!-- public-IP tunnel endpoints -->
+        <g>
+          <circle cx="632" cy="312" r="6" fill="none" stroke="#E3008C" stroke-width="2" class="ep-pulse"/>
+          <circle cx="632" cy="312" r="5.5" fill="#E3008C" stroke="#ffffff" stroke-width="1.8"/>
+          <circle cx="1088" cy="312" r="6" fill="none" stroke="#E3008C" stroke-width="2" class="ep-pulse"/>
+          <circle cx="1088" cy="312" r="5.5" fill="#E3008C" stroke="#ffffff" stroke-width="1.8"/>
+        </g>
+
+        <!-- link labels -->
+        <text id="lbl-ipsec" class="s-link fade" opacity="0" x="858" y="289" fill="#0B3B79" text-anchor="middle">IPSEC</text>
+        <text id="lbl-bgp" class="s-link fade" opacity="0" x="858" y="345" fill="#b07a00" text-anchor="middle">BGP</text>
+
+        <!-- status pills -->
+        <g id="ike-note" class="fade" opacity="0">
+          <rect x="773" y="245" width="170" height="26" rx="13" fill="#fff4d6" stroke="#e3b341"/>
+          <circle cx="790" cy="258" r="4" fill="#e0a106" class="pulse"/>
+          <text x="803" y="262" font-size="12" font-weight="600" fill="#9a6a00" letter-spacing="0.2">Negotiating IKE SA…</text>
+        </g>
+        <g id="badge-est" class="fade" opacity="0">
+          <rect x="767" y="245" width="182" height="26" rx="13" fill="#e7f7ec" stroke="#37b24d"/>
+          <text x="784" y="262" font-size="12.5">🔒</text>
+          <text x="802" y="262" font-size="12" font-weight="700" fill="#1c8a3a" letter-spacing="0.2">IPsec Tunnel Established</text>
+        </g>
+
+        <!-- ===== Global Secure Access (service) ===== -->
+        <!-- connectors (behind clouds) -->
+        <g stroke="#1E5FB5" stroke-width="2.6" fill="none" stroke-linecap="round">
+          <path d="M1240 286 L1350 216"/>
+          <path d="M1240 338 L1350 414"/>
+        </g>
+
+        <!-- GSA service box -->
+        <g filter="url(#softshadow)">
+          <rect x="1090" y="258" width="150" height="108" rx="14" fill="url(#triGrad)" stroke="#082C57" stroke-width="1"/>
+        </g>
+        <!-- globe -->
+        <circle cx="1165" cy="294" r="20" fill="#0B3B79" stroke="#C7E6FF" stroke-width="1.5"/>
+        <g stroke="#C7E6FF" stroke-width="1.2" fill="none">
+          <ellipse cx="1165" cy="294" rx="8.5" ry="20"/>
+          <line x1="1145" y1="294" x2="1185" y2="294"/>
+          <line x1="1148" y1="285" x2="1182" y2="285"/>
+          <line x1="1148" y1="303" x2="1182" y2="303"/>
+        </g>
+        <text class="s-gsa" x="1165" y="335" text-anchor="middle">Global Secure</text>
+        <text class="s-gsa" x="1165" y="352" text-anchor="middle">Access</text>
+        <!-- connector ports on box right edge -->
+        <g fill="#0B3B79" stroke="#ffffff" stroke-width="1.6">
+          <circle cx="1240" cy="286" r="4.5"/>
+          <circle cx="1240" cy="338" r="4.5"/>
+        </g>
+
+        <!-- Internet cloud -->
+        <g filter="url(#softshadow)">
+          <g transform="translate(1314,142) scale(0.9)">
+            <path d="M158 116 H64 C40 116 20 96 20 72 C20 50 37 32 59 30 C66 14 82 4 100 4 C123 4 142 21 145 44 C166 46 182 64 180 86 C179 104 166 116 158 116 Z"
+                  fill="#ffffff" stroke="url(#cloudStroke)" stroke-width="2.2"/>
+          </g>
+        </g>
+        <g fill="none" stroke="#0B3B79" stroke-width="1.6">
+          <circle cx="1404" cy="184" r="17" fill="#eaf1ff"/>
+          <ellipse cx="1404" cy="184" rx="7" ry="17"/>
+          <line x1="1387" y1="184" x2="1421" y2="184"/>
+          <line x1="1390" y1="174" x2="1418" y2="174"/>
+          <line x1="1390" y1="194" x2="1418" y2="194"/>
+        </g>
+        <text class="s-node" x="1404" y="222" text-anchor="middle">Internet</text>
+
+        <!-- Microsoft 365 cloud -->
+        <g filter="url(#softshadow)">
+          <g transform="translate(1314,398) scale(0.9)">
+            <path d="M158 116 H64 C40 116 20 96 20 72 C20 50 37 32 59 30 C66 14 82 4 100 4 C123 4 142 21 145 44 C166 46 182 64 180 86 C179 104 166 116 158 116 Z"
+                  fill="#ffffff" stroke="url(#cloudStroke)" stroke-width="2.2"/>
+          </g>
+        </g>
+        <g>
+          <rect x="1387" y="419" width="16" height="16" fill="#f25022"/>
+          <rect x="1406" y="419" width="16" height="16" fill="#7fba00"/>
+          <rect x="1387" y="438" width="16" height="16" fill="#00a4ef"/>
+          <rect x="1406" y="438" width="16" height="16" fill="#ffb900"/>
+        </g>
+        <text class="s-node" x="1404" y="478" text-anchor="middle">Microsoft 365</text>
+
+        <!-- secure traffic inspection (magnifying glass) -->
+        <g id="inspector" class="fade" opacity="0" transform="translate(1286,304)">
+          <circle id="insp-ping" cx="0" cy="0" r="15" fill="none" stroke="#16B5D0" stroke-width="2"/>
+          <g class="inspect">
+            <circle cx="0" cy="0" r="16" fill="rgba(43,111,225,0.16)" stroke="#082C57" stroke-width="3.5"/>
+            <circle cx="0" cy="0" r="16" fill="none" stroke="#1A74D2" stroke-width="1.4"/>
+            <line x1="11.5" y1="11.5" x2="23.5" y2="23.5" stroke="#082C57" stroke-width="5" stroke-linecap="round"/>
+            <path d="M-7 -6 A9 9 0 0 1 4 -9" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
+          </g>
+        </g>
+
+        <!-- packet layer (always on top) -->
+        <g id="pkt-layer"></g>
+      </svg>
+    </div>
+  </div>
+
+  <div class="desc" id="desc">
+    <h2 id="desc-title">Stage 1 — IPsec Tunnel Creation</h2>
+    <p id="desc-body"></p>
+    <div class="chips" id="desc-chips"></div>
+  </div>
+
+  <!-- Legend -->
+  <div class="grid">
+    <div class="lcard">
+      <div class="lh"><span class="ico">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="4" width="18" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      </span><h3>Internal Network</h3></div>
+      <p><span class="mono">192.168.100.0/24</span><br/>Private network hosting internal resources.</p>
+    </div>
+    <div class="lcard">
+      <div class="lh"><span class="ico">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 2 L20 6 V11 C20 16 16 20 12 22 C8 20 4 16 4 11 V6 Z"/></svg>
+      </span><h3>GSA Appliance</h3></div>
+      <ul>
+        <li>Internal Interface (LAN): <span class="mono">192.168.100.1/24</span></li>
+        <li>External (Internal IP): <span class="mono">172.x.x.x</span></li>
+        <li>External (Public IP): <span class="mono">50.X.X.X</span></li>
+      </ul>
+    </div>
+    <div class="lcard">
+      <div class="lh"><span class="ico">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
+      </span><h3>Global Secure Access</h3></div>
+      <ul>
+        <li>IPsec + BGP connectivity</li>
+        <li>Secure access to Internet &amp; Microsoft 365</li>
+      </ul>
+    </div>
+    <div class="lcard">
+      <div class="lh"><span class="ico">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M6 16 a4 4 0 0 1 1 -8 a5 5 0 0 1 9 -1 a4 4 0 0 1 1 9 Z"/></svg>
+      </span><h3>Destinations</h3></div>
+      <ul>
+        <li>Internet</li>
+        <li>Microsoft 365</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Key points -->
+  <div class="keypoints">
+    <h3><span class="kp-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6l-1 6 3.5 3v2H6.5v-2L10 9z"/><line x1="12" y1="14" x2="12" y2="21"/></svg></span>Key Points</h3>
+    <ul class="kp-cols" style="list-style: disc; padding-left: 18px;">
+      <li>Traffic from the internal network is routed through the GSA Appliance.</li>
+      <li>Global Secure Access provides secure connectivity to Internet and Microsoft 365.</li>
+      <li>The GSA Appliance establishes an IPsec tunnel with Global Secure Access.</li>
+      <li>Public IPs are used for external connectivity and remote network access.</li>
+      <li>BGP is used for dynamic routing between the GSA Appliance and Global Secure Access.</li>
+      <li>Microsoft 365 and Internet traffic are tunneled, then distributed at the GSA edge.</li>
+    </ul>
+  </div>
+
+  <footer class="note">Use the stage buttons or “Play all stages” to watch the IPsec → BGP → traffic-forwarding sequence. Colors are illustrative of Microsoft Global Secure Access components.</footer>
+</div>
+
+<script>
+(() => {
+  const NS = "http://www.w3.org/2000/svg";
+  const layer = document.getElementById("pkt-layer");
+  const guides = {
+    ike:  document.getElementById("g-ike"),
+    m365: document.getElementById("g-m365"),
+    inet: document.getElementById("g-inet"),
+  };
+  const el = (id) => document.getElementById(id);
+  const tunnel = el("tunnel");
+  const baseLink = el("base-link");
+  const badgeEst = el("badge-est");
+  const ikeNote = el("ike-note");
+  const lblIpsec = el("lbl-ipsec");
+  const lblBgp = el("lbl-bgp");
+  const routesPanel = el("routes-panel");
+  const inspector = el("inspector");
+  const rrows = [el("rrow-0"), el("rrow-1"), el("rrow-2")];
+
+  const C = {
+    ike:  "#2B9AF3",
+    ack:  "#86b7ff",
+    bgp:  "#e0a106",
+    m365: "#e8590c",
+    inet: "#1a8f4a",
+  };
+
+  const show = (n, v) => { n.style.opacity = v ? "1" : "0"; };
+
+  // ---- packet engine ----
+  const packets = [];
+  function addPacket({ guide, color, r = 7, dur = 2.0, reverse = false, onArrive }) {
+    const len = guide.getTotalLength();
+    const c = document.createElementNS(NS, "circle");
+    c.setAttribute("r", r);
+    c.setAttribute("fill", color);
+    c.setAttribute("filter", "url(#glow)");
+    layer.appendChild(c);
+    packets.push({ c, guide, len, dur, reverse, onArrive, t: 0 });
+  }
+  function clearPackets() {
+    packets.splice(0).forEach((p) => p.c.remove());
+  }
+  let last = performance.now();
+  function tick(now) {
+    const dt = Math.min((now - last) / 1000, 0.05);
+    last = now;
+    for (let i = packets.length - 1; i >= 0; i--) {
+      const p = packets[i];
+      p.t += dt;
+      let f = p.t / p.dur;
+      if (f >= 1) {
+        if (p.onArrive) p.onArrive();
+        p.c.remove();
+        packets.splice(i, 1);
+        continue;
+      }
+      const pos = p.reverse ? p.len * (1 - f) : p.len * f;
+      const pt = p.guide.getPointAtLength(pos);
+      p.c.setAttribute("cx", pt.x);
+      p.c.setAttribute("cy", pt.y);
+      let op = 1;
+      if (f < 0.07) op = f / 0.07;
+      else if (f > 0.9) op = (1 - f) / 0.1;
+      p.c.setAttribute("opacity", op);
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  // ---- timers ----
+  let timers = [];
+  function every(ms, fn) { fn(); const id = setInterval(fn, ms); timers.push(id); return id; }
+  function after(ms, fn) { const id = setTimeout(fn, ms); timers.push(id); return id; }
+  function clearTimers() { timers.forEach((id) => { clearInterval(id); clearTimeout(id); }); timers = []; }
+
+  function setTunnel(on) {
+    show(tunnel, on);
+    show(baseLink, !on);
+    show(lblIpsec, on);
+  }
+  function highlightRoute(i) {
+    const row = rrows[i % 3];
+    row.style.opacity = "1";
+    setTimeout(() => { row.style.opacity = "0"; }, 1000);
+  }
+
+  // ---- descriptions ----
+  const DESCRIPTIONS = {
+    1: {
+      t: "Stage 1 — IPsec Tunnel Creation",
+      b: "The GSA Appliance sends IKE negotiation packets from its public IP (50.X.X.X) to the Global Secure Access remote-network public IP. Once the handshake succeeds, an encrypted IPsec tunnel is established between the appliance and Global Secure Access.",
+      chips: [["IKE / IPsec negotiation", C.ike], ["Tunnel established", "#1c8a3a"]],
+    },
+    2: {
+      t: "Stage 2 — BGP Setup & Route Exchange",
+      b: "Over the established tunnel a BGP session is formed. Global Secure Access advertises routes (Microsoft 365 prefixes, Internet routes, and a default route) back to the GSA Appliance, which learns them into its routing table.",
+      chips: [["BGP route advertisement (GSA → Appliance)", C.bgp]],
+    },
+    3: {
+      t: "Stage 3 — Traffic Forwarding",
+      b: "The internal host originates two classes of traffic — Microsoft 365 and Internet. Both are forwarded to the GSA Appliance, encapsulated through the IPsec tunnel to Global Secure Access, then distributed to their destinations.",
+      chips: [["Microsoft 365 traffic", C.m365], ["Internet traffic", C.inet]],
+    },
+  };
+  function updateDesc(n) {
+    const d = DESCRIPTIONS[n];
+    el("desc-title").textContent = d.t;
+    el("desc-body").textContent = d.b;
+    el("desc-chips").innerHTML = d.chips
+      .map(([label, col]) => `<span class="chip"><span class="dot" style="background:${col}"></span>${label}</span>`)
+      .join("");
+  }
+
+  // ---- stage controller ----
+  let stage = 1;
+  function setStage(n, fromPlay) {
+    if (!fromPlay) stopPlay();
+    stage = n;
+    clearTimers();
+    clearPackets();
+    document.querySelectorAll("#seg button").forEach((b) =>
+      b.classList.toggle("active", +b.dataset.stage === n)
+    );
+    updateDesc(n);
+
+    // reset visuals
+    show(ikeNote, false);
+    show(badgeEst, false);
+    show(lblBgp, false);
+    show(routesPanel, false);
+    show(inspector, false);
+    rrows.forEach((r) => (r.style.opacity = "0"));
+
+    if (n === 1) {
+      setTunnel(false);
+      show(lblIpsec, false);
+      show(ikeNote, true);
+      // handshake bursts (appliance -> GSA) with occasional reverse ack
+      every(360, () => addPacket({ guide: guides.ike, color: C.ike, r: 7, dur: 1.3 }));
+      after(180, () => every(620, () => addPacket({ guide: guides.ike, color: C.ack, r: 5, dur: 1.3, reverse: true })));
+      // establish tunnel
+      after(1950, () => {
+        show(ikeNote, false);
+        setTunnel(true);
+        show(badgeEst, true);
+      });
+    } else if (n === 2) {
+      setTunnel(true);
+      show(badgeEst, true);
+      show(lblBgp, true);
+      show(routesPanel, true);
+      let i = 0;
+      every(640, () => addPacket({ guide: guides.ike, color: C.bgp, r: 7, dur: 1.7, reverse: true, onArrive: () => highlightRoute(i++) }));
+      after(320, () => every(1500, () => addPacket({ guide: guides.ike, color: "#f0cf7a", r: 4, dur: 1.7 })));
+    } else if (n === 3) {
+      setTunnel(true);
+      show(badgeEst, true);
+      show(lblBgp, true);
+      show(inspector, true);
+      every(720, () => addPacket({ guide: guides.m365, color: C.m365, r: 7, dur: 2.6 }));
+      after(360, () => every(720, () => addPacket({ guide: guides.inet, color: C.inet, r: 7, dur: 2.6 })));
+    }
+  }
+
+  // ---- play all ----
+  let playTimers = [];
+  let playing = false;
+  const playBtn = el("playAll");
+  function stopPlay() {
+    playTimers.forEach((id) => clearTimeout(id));
+    playTimers = [];
+    if (playing) { playing = false; playBtn.textContent = "▶ Play all stages"; }
+  }
+  function playAll() {
+    stopPlay();
+    playing = true;
+    playBtn.textContent = "⏸ Stop";
+    setStage(1, true);
+    document.querySelectorAll("#seg button").forEach((b) => b.classList.toggle("active", +b.dataset.stage === 1));
+    playTimers.push(setTimeout(() => { setStage(2, true); }, 5200));
+    playTimers.push(setTimeout(() => { setStage(3, true); }, 10400));
+    playTimers.push(setTimeout(() => { playing = false; playBtn.textContent = "▶ Play all stages"; }, 10600));
+  }
+
+  // ---- wire up ----
+  document.querySelectorAll("#seg button").forEach((b) =>
+    b.addEventListener("click", () => setStage(+b.dataset.stage))
+  );
+  playBtn.addEventListener("click", () => { playing ? stopPlay() : playAll(); });
+  el("replay").addEventListener("click", () => setStage(stage));
+
+  // start
+  const params = new URLSearchParams(location.search);
+  const startStage = Math.min(3, Math.max(1, +params.get("stage") || 1));
+  setStage(startStage);
+  if (params.get("play") === "1") playAll();
+})();
+</script>
+</body>
+</html>

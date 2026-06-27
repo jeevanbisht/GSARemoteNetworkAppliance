@@ -1,0 +1,19 @@
+[Unit]
+Description=RNFleet Device Runtime Agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/rnfleet
+EnvironmentFile=/etc/rnfleet/device-runtime.env
+ExecStart=/usr/bin/node /opt/rnfleet/apps/device-runtime/src/agent.js
+Restart=always
+RestartSec=10
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
