@@ -281,6 +281,12 @@ See [`agents.md`](agents.md) for the full set of engineering conventions.
 
 ---
 
+## 🙏 Acknowledgements
+
+- **Vijay Kumar Gorabal** (Microsoft) — for his hackathon project on Linux.
+
+---
+
 ## 📄 License
 
 [MIT](LICENSE) — free to use, fork, and modify.
